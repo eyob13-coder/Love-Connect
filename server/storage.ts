@@ -4,15 +4,16 @@ export interface User {
   id: string;
   email: string;
   passwordHash: string;
+  passwordSalt: string;
   name: string;
   age: number;
-  gender: string;
+  gender: "male" | "female";
   bio: string;
   interests: string[];
   location: { city: string; country: string };
   preferences: {
     ageRange: { min: number; max: number };
-    genderPreference: string;
+    genderPreference: "male" | "female" | "any";
   };
   photos: string[];
   isPremium: boolean;
@@ -53,26 +54,45 @@ const swipes = new Map<string, Swipe>();
 const matches = new Map<string, Match>();
 const messages = new Map<string, Message>();
 
+export const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
 function generateId(): string {
   return crypto.randomBytes(16).toString("hex");
-}
-
-function hashPassword(password: string): string {
-  return crypto
-    .createHash("sha256")
-    .update(password + "connectly_salt_2024")
-    .digest("hex");
-}
-
-function verifyPassword(password: string, hash: string): boolean {
-  return hashPassword(password) === hash;
 }
 
 function getDayString(): string {
   return new Date().toISOString().split("T")[0];
 }
 
-const DEMO_PROFILES = [
+function hashPasswordPbkdf2(password: string, salt: string): string {
+  return crypto
+    .pbkdf2Sync(password, salt, 100000, 64, "sha512")
+    .toString("hex");
+}
+
+function createPasswordHash(password: string): { hash: string; salt: string } {
+  const salt = crypto.randomBytes(32).toString("hex");
+  const hash = hashPasswordPbkdf2(password, salt);
+  return { hash, salt };
+}
+
+function verifyPassword(password: string, hash: string, salt: string): boolean {
+  const attempt = hashPasswordPbkdf2(password, salt);
+  return crypto.timingSafeEqual(Buffer.from(attempt), Buffer.from(hash));
+}
+
+const DEMO_PROFILES: Array<{
+  email: string;
+  name: string;
+  age: number;
+  gender: "male" | "female";
+  bio: string;
+  interests: string[];
+  location: { city: string; country: string };
+  preferences: { ageRange: { min: number; max: number }; genderPreference: "male" | "female" | "any" };
+  photos: string[];
+  isPremium: boolean;
+}> = [
   {
     email: "sophia@demo.com",
     name: "Sophia",
@@ -176,10 +196,12 @@ function initializeDemoProfiles() {
     DEMO_PROFILES.forEach((profile) => {
       const id = generateId();
       const today = getDayString();
+      const { hash, salt } = createPasswordHash("demo123");
       const user: User = {
         ...profile,
         id,
-        passwordHash: hashPassword("demo123"),
+        passwordHash: hash,
+        passwordSalt: salt,
         swipesUsedToday: 0,
         messagesUsedToday: 0,
         lastSwipeReset: today,
@@ -200,20 +222,37 @@ export const storage = {
     password: string;
     name: string;
     age: number;
-    gender: string;
+    gender: "male" | "female";
   }): User {
+    const emailLower = data.email.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLower)) {
+      throw new Error("Invalid email address");
+    }
     const existing = Array.from(users.values()).find(
-      (u) => u.email.toLowerCase() === data.email.toLowerCase()
+      (u) => u.email === emailLower
     );
     if (existing) throw new Error("Email already registered");
 
+    if (data.password.length < 6) {
+      throw new Error("Password must be at least 6 characters");
+    }
+    if (data.age < 18 || data.age > 100) {
+      throw new Error("You must be at least 18 years old");
+    }
+    if (!["male", "female"].includes(data.gender)) {
+      throw new Error("Gender must be male or female");
+    }
+
     const id = generateId();
     const today = getDayString();
+    const { hash, salt } = createPasswordHash(data.password);
+
     const user: User = {
       id,
-      email: data.email,
-      passwordHash: hashPassword(data.password),
-      name: data.name,
+      email: emailLower,
+      passwordHash: hash,
+      passwordSalt: salt,
+      name: data.name.trim().slice(0, 60),
       age: data.age,
       gender: data.gender,
       bio: "",
@@ -238,7 +277,7 @@ export const storage = {
 
   findUserByEmail(email: string): User | undefined {
     return Array.from(users.values()).find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
+      (u) => u.email === email.toLowerCase().trim()
     );
   },
 
@@ -389,11 +428,7 @@ export const storage = {
       );
   },
 
-  sendMessage(
-    matchId: string,
-    senderId: string,
-    content: string
-  ): Message {
+  sendMessage(matchId: string, senderId: string, content: string): Message {
     const match = matches.get(matchId);
     if (!match) throw new Error("Match not found");
     if (match.user1Id !== senderId && match.user2Id !== senderId) {
@@ -404,7 +439,7 @@ export const storage = {
       id: generateId(),
       matchId,
       senderId,
-      content,
+      content: content.slice(0, 1000),
       createdAt: new Date().toISOString(),
       read: false,
     };
@@ -462,8 +497,7 @@ export const storage = {
   getStats() {
     return {
       totalUsers: users.size,
-      premiumUsers: Array.from(users.values()).filter((u) => u.isPremium)
-        .length,
+      premiumUsers: Array.from(users.values()).filter((u) => u.isPremium).length,
       totalMatches: matches.size,
       totalMessages: messages.size,
     };

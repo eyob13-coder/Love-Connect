@@ -17,17 +17,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { Colors } from "@/constants/colors";
 
-const GENDERS = ["male", "female", "non-binary", "other"];
+const GENDERS: Array<{ value: "male" | "female"; label: string; icon: string }> = [
+  { value: "male", label: "Male", icon: "man" },
+  { value: "female", label: "Female", icon: "woman" },
+];
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const { register } = useAuth();
-  const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [age, setAge] = useState("");
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState<"male" | "female" | "">("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -40,6 +42,10 @@ export default function RegisterScreen() {
     const ageNum = parseInt(age, 10);
     if (isNaN(ageNum) || ageNum < 18 || ageNum > 100) {
       setError("You must be at least 18 years old");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
       return;
     }
     setError("");
@@ -90,12 +96,12 @@ export default function RegisterScreen() {
             <Text style={styles.title}>Create account</Text>
             <Text style={styles.subtitle}>Find your perfect connection</Text>
 
-            {error ? (
+            {!!error && (
               <View style={styles.errorBox}>
                 <Ionicons name="alert-circle" size={16} color={Colors.error} />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
-            ) : null}
+            )}
 
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Full Name</Text>
@@ -171,20 +177,25 @@ export default function RegisterScreen() {
               <View style={styles.genderRow}>
                 {GENDERS.map((g) => (
                   <Pressable
-                    key={g}
+                    key={g.value}
                     style={[
                       styles.genderBtn,
-                      gender === g && styles.genderBtnActive,
+                      gender === g.value && styles.genderBtnActive,
                     ]}
-                    onPress={() => setGender(g)}
+                    onPress={() => setGender(g.value)}
                   >
+                    <Ionicons
+                      name={g.icon as any}
+                      size={24}
+                      color={gender === g.value ? Colors.primary : Colors.textMuted}
+                    />
                     <Text
                       style={[
                         styles.genderBtnText,
-                        gender === g && styles.genderBtnTextActive,
+                        gender === g.value && styles.genderBtnTextActive,
                       ]}
                     >
-                      {g.charAt(0).toUpperCase() + g.slice(1)}
+                      {g.label}
                     </Text>
                   </Pressable>
                 ))}
@@ -309,11 +320,15 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   eyeButton: { padding: 4 },
-  genderRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  genderRow: { flexDirection: "row", gap: 12 },
   genderBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: "#E5E7EB",
     backgroundColor: "#F9FAFB",
@@ -323,8 +338,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF0F2",
   },
   genderBtnText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
     color: Colors.textSecondary,
   },
   genderBtnTextActive: { color: Colors.primary },

@@ -10,6 +10,8 @@ import {
   Platform,
   ActivityIndicator,
   ScrollView,
+  Image,
+  Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -29,6 +31,7 @@ interface Profile {
   id: string;
   name: string;
   age: number;
+  gender: string;
   bio: string;
   interests: string[];
   location: { city: string; country: string };
@@ -46,6 +49,183 @@ const AVATAR_COLORS = [
   ["#43E97B", "#38F9D7"],
   ["#FA709A", "#FEE140"],
 ];
+
+function HowMatchingWorksModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const STEPS = [
+    {
+      icon: "flame" as const,
+      color: Colors.primary,
+      title: "Browse Profiles",
+      desc: "You see profiles of people near you who match your preferences.",
+    },
+    {
+      icon: "heart" as const,
+      color: Colors.like,
+      title: "Swipe Right to Like",
+      desc: "Swipe right or tap the heart if you're interested in someone.",
+    },
+    {
+      icon: "close-circle" as const,
+      color: Colors.pass,
+      title: "Swipe Left to Pass",
+      desc: "Not interested? Swipe left to see the next profile.",
+    },
+    {
+      icon: "star" as const,
+      color: Colors.superlike,
+      title: "Super Like",
+      desc: "Tap the star to super like — they'll know you really like them.",
+    },
+    {
+      icon: "heart-circle" as const,
+      color: Colors.primary,
+      title: "It's a Match!",
+      desc: "When two people both like each other, it's a match! You can then start chatting.",
+    },
+    {
+      icon: "chatbubbles" as const,
+      color: Colors.primary,
+      title: "Start Chatting",
+      desc: "Only matches can message each other — no unwanted messages.",
+    },
+  ];
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={hwStyles.container}>
+        <View style={hwStyles.header}>
+          <Text style={hwStyles.title}>How Matching Works</Text>
+          <Pressable style={hwStyles.closeBtn} onPress={onClose}>
+            <Ionicons name="close" size={20} color={Colors.text} />
+          </Pressable>
+        </View>
+        <ScrollView
+          contentContainerStyle={hwStyles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <LinearGradient
+            colors={["#FFF0F2", "#FFF5F5"]}
+            style={hwStyles.heroBanner}
+          >
+            <Ionicons name="heart-circle" size={56} color={Colors.primary} />
+            <Text style={hwStyles.heroText}>Real connections start with a mutual interest</Text>
+          </LinearGradient>
+
+          {STEPS.map((step, i) => (
+            <View key={i} style={hwStyles.step}>
+              <View style={[hwStyles.stepIcon, { backgroundColor: step.color + "18" }]}>
+                <Ionicons name={step.icon} size={22} color={step.color} />
+              </View>
+              <View style={hwStyles.stepInfo}>
+                <Text style={hwStyles.stepTitle}>{step.title}</Text>
+                <Text style={hwStyles.stepDesc}>{step.desc}</Text>
+              </View>
+            </View>
+          ))}
+
+          <View style={hwStyles.freeVsPremium}>
+            <Text style={hwStyles.fvpTitle}>Free vs Premium</Text>
+            <View style={hwStyles.fvpRow}>
+              <Ionicons name="flash-outline" size={16} color={Colors.textMuted} />
+              <Text style={hwStyles.fvpText}>Free: 10 swipes per day</Text>
+            </View>
+            <View style={hwStyles.fvpRow}>
+              <Ionicons name="flash" size={16} color={Colors.premium} />
+              <Text style={hwStyles.fvpText}>Premium: Unlimited swipes + see who liked you</Text>
+            </View>
+            <View style={hwStyles.fvpRow}>
+              <Ionicons name="chatbubble-outline" size={16} color={Colors.textMuted} />
+              <Text style={hwStyles.fvpText}>Free: 5 messages per day per match</Text>
+            </View>
+            <View style={hwStyles.fvpRow}>
+              <Ionicons name="chatbubble" size={16} color={Colors.premium} />
+              <Text style={hwStyles.fvpText}>Premium: Unlimited messaging</Text>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+const hwStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#FAFAFA" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+    backgroundColor: "#fff",
+  },
+  title: { fontFamily: "Inter_700Bold", fontSize: 20, color: Colors.text },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F5F5F5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scrollContent: { padding: 20, gap: 16 },
+  heroBanner: {
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+  },
+  heroText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+    color: Colors.text,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  step: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 14,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  stepIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepInfo: { flex: 1 },
+  stepTitle: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.text, marginBottom: 3 },
+  stepDesc: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
+  freeVsPremium: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  fvpTitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 15,
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  fvpRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  fvpText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textSecondary, flex: 1 },
+});
 
 function ProfileCard({
   profile,
@@ -77,6 +257,7 @@ function ProfileCard({
 
   const colorPair = AVATAR_COLORS[index % AVATAR_COLORS.length];
   const initials = profile.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  const hasPhoto = profile.photos && profile.photos.length > 0;
 
   const panResponder = useRef(
     PanResponder.create({
@@ -129,19 +310,28 @@ function ProfileCard({
       style={[styles.card, cardStyle]}
       {...(isTop ? panResponder.panHandlers : {})}
     >
-      <LinearGradient
-        colors={colorPair as any}
-        style={styles.cardAvatarBg}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <Text style={styles.cardInitials}>{initials}</Text>
-        {profile.isPremium && (
-          <View style={styles.premiumBadge}>
-            <Ionicons name="star" size={10} color="#fff" />
-          </View>
-        )}
-      </LinearGradient>
+      {hasPhoto ? (
+        <Image
+          source={{ uri: profile.photos[0] }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+        />
+      ) : (
+        <LinearGradient
+          colors={colorPair as any}
+          style={styles.cardAvatarBg}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Text style={styles.cardInitials}>{initials}</Text>
+        </LinearGradient>
+      )}
+
+      {profile.isPremium && (
+        <View style={styles.premiumBadge}>
+          <Ionicons name="star" size={10} color="#fff" />
+        </View>
+      )}
 
       <LinearGradient
         colors={["transparent", "rgba(0,0,0,0.85)"]}
@@ -166,6 +356,15 @@ function ProfileCard({
           <Text style={styles.cardName}>
             {profile.name}, {profile.age}
           </Text>
+          {profile.gender ? (
+            <View style={styles.genderPill}>
+              <Ionicons
+                name={profile.gender === "female" ? "woman" : "man"}
+                size={11}
+                color="rgba(255,255,255,0.9)"
+              />
+            </View>
+          ) : null}
           {profile.location.city ? (
             <View style={styles.locationPill}>
               <Ionicons name="location" size={11} color="rgba(255,255,255,0.8)" />
@@ -203,6 +402,7 @@ export default function DiscoverScreen() {
   const [loading, setLoading] = useState(true);
   const [matchProfile, setMatchProfile] = useState<Profile | null>(null);
   const [limitReached, setLimitReached] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
   const matchAnimation = useRef(new Animated.Value(0)).current;
 
   async function loadProfiles() {
@@ -211,6 +411,7 @@ export default function DiscoverScreen() {
       const res = await authedRequest("GET", "/api/discover", undefined, token);
       const data = await res.json();
       setProfiles(data.profiles || []);
+      setLimitReached(false);
     } catch {
     } finally {
       setLoading(false);
@@ -232,7 +433,7 @@ export default function DiscoverScreen() {
     }).start();
     setTimeout(() => {
       setMatchProfile(null);
-    }, 2800);
+    }, 3000);
   }, []);
 
   async function handleSwipe(direction: "like" | "pass" | "superlike") {
@@ -261,16 +462,12 @@ export default function DiscoverScreen() {
     refreshUser();
   }
 
-  function triggerSwipe(direction: "like" | "pass") {
-    handleSwipe(direction);
-  }
-
   const topProfile = profiles[0];
   const nextProfile = profiles[1];
 
   const swipesLeft = user
     ? user.isPremium
-      ? "Unlimited"
+      ? null
       : Math.max(0, 10 - (user.swipesUsedToday || 0))
     : 0;
 
@@ -282,12 +479,18 @@ export default function DiscoverScreen() {
           <Text style={styles.headerTitle}>Connectly</Text>
         </View>
         <View style={styles.headerRight}>
-          {!user?.isPremium && (
+          {!user?.isPremium && swipesLeft !== null && (
             <Pressable style={styles.swipeCounter} onPress={() => router.push("/premium")}>
               <Ionicons name="flash" size={13} color={Colors.primary} />
               <Text style={styles.swipeCounterText}>{swipesLeft} left</Text>
             </Pressable>
           )}
+          <Pressable
+            onPress={() => setShowHowItWorks(true)}
+            style={styles.infoBtn}
+          >
+            <Ionicons name="information-circle-outline" size={22} color={Colors.textSecondary} />
+          </Pressable>
           <Pressable onPress={() => router.push("/premium")} style={styles.crownBtn}>
             <Ionicons name="star" size={20} color={user?.isPremium ? Colors.premium : Colors.textMuted} />
           </Pressable>
@@ -301,10 +504,7 @@ export default function DiscoverScreen() {
           </View>
         ) : limitReached ? (
           <View style={styles.emptyState}>
-            <LinearGradient
-              colors={["#FFF0F2", "#FFF5F5"]}
-              style={styles.emptyCard}
-            >
+            <LinearGradient colors={["#FFF0F2", "#FFF5F5"]} style={styles.emptyCard}>
               <View style={styles.emptyIconBg}>
                 <Ionicons name="flash" size={40} color={Colors.primary} />
               </View>
@@ -312,10 +512,7 @@ export default function DiscoverScreen() {
               <Text style={styles.emptySubtitle}>
                 Go Premium for unlimited swipes and see who liked you
               </Text>
-              <Pressable
-                style={styles.upgradeBtn}
-                onPress={() => router.push("/premium")}
-              >
+              <Pressable style={styles.upgradeBtn} onPress={() => router.push("/premium")}>
                 <LinearGradient
                   colors={[Colors.premium, Colors.premiumDark]}
                   style={styles.upgradeBtnGradient}
@@ -330,16 +527,13 @@ export default function DiscoverScreen() {
           </View>
         ) : profiles.length === 0 ? (
           <View style={styles.emptyState}>
-            <LinearGradient
-              colors={["#FFF0F2", "#FFF5F5"]}
-              style={styles.emptyCard}
-            >
+            <LinearGradient colors={["#FFF0F2", "#FFF5F5"]} style={styles.emptyCard}>
               <View style={styles.emptyIconBg}>
                 <Ionicons name="heart-dislike" size={40} color={Colors.primary} />
               </View>
               <Text style={styles.emptyTitle}>You've seen everyone</Text>
               <Text style={styles.emptySubtitle}>
-                Check back later for new profiles in your area
+                Check back later for new profiles
               </Text>
               <Pressable style={styles.refreshBtn} onPress={loadProfiles}>
                 <Text style={styles.refreshBtnText}>Refresh</Text>
@@ -374,7 +568,7 @@ export default function DiscoverScreen() {
         <View style={[styles.actions, { paddingBottom: insets.bottom + 80 }]}>
           <Pressable
             style={[styles.actionBtn, styles.passBtn]}
-            onPress={() => triggerSwipe("pass")}
+            onPress={() => handleSwipe("pass")}
           >
             <Ionicons name="close" size={28} color={Colors.pass} />
           </Pressable>
@@ -386,14 +580,14 @@ export default function DiscoverScreen() {
           </Pressable>
           <Pressable
             style={[styles.actionBtn, styles.likeBtn]}
-            onPress={() => triggerSwipe("like")}
+            onPress={() => handleSwipe("like")}
           >
             <Ionicons name="heart" size={28} color={Colors.like} />
           </Pressable>
         </View>
       )}
 
-      {matchProfile && (
+      {!!matchProfile && (
         <Animated.View
           style={[
             styles.matchOverlay,
@@ -402,9 +596,11 @@ export default function DiscoverScreen() {
               transform: [{ scale: matchAnimation }],
             },
           ]}
+          pointerEvents="box-none"
         >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setMatchProfile(null)} />
           <LinearGradient
-            colors={["rgba(232,68,90,0.95)", "rgba(255,107,129,0.95)"]}
+            colors={["rgba(232,68,90,0.97)", "rgba(255,107,129,0.97)"]}
             style={styles.matchCard}
           >
             <Ionicons name="heart" size={60} color="#fff" />
@@ -419,11 +615,16 @@ export default function DiscoverScreen() {
                 router.push("/(tabs)/matches");
               }}
             >
-              <Text style={styles.matchChatBtnText}>Send a Message</Text>
+              <Text style={styles.matchChatBtnText}>Go to Matches</Text>
             </Pressable>
           </LinearGradient>
         </Animated.View>
       )}
+
+      <HowMatchingWorksModal
+        visible={showHowItWorks}
+        onClose={() => setShowHowItWorks(false)}
+      />
     </View>
   );
 }
@@ -444,7 +645,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     letterSpacing: -0.5,
   },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   swipeCounter: {
     flexDirection: "row",
     alignItems: "center",
@@ -459,10 +660,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.primary,
   },
+  infoBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#F9FAFB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   crownBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: "#F9FAFB",
     alignItems: "center",
     justifyContent: "center",
@@ -484,6 +693,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 8,
+    backgroundColor: "#f0f0f0",
   },
   cardAvatarBg: {
     width: "100%",
@@ -505,6 +715,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(245,158,11,0.9)",
     borderRadius: 12,
     padding: 6,
+    zIndex: 2,
   },
   cardGradient: {
     position: "absolute",
@@ -520,6 +731,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 4,
+    zIndex: 3,
   },
   likeLabel: {
     left: 20,
@@ -543,6 +755,15 @@ const styles = StyleSheet.create({
     color: Colors.pass,
     letterSpacing: 2,
   },
+  genderPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
   cardInfo: {
     position: "absolute",
     bottom: 0,
@@ -554,7 +775,7 @@ const styles = StyleSheet.create({
   cardNameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
     flexWrap: "wrap",
   },
   cardName: {
