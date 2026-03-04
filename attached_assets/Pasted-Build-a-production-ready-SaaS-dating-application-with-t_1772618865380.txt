@@ -1,0 +1,201 @@
+Build a production-ready SaaS dating application with the following architecture and requirements:
+
+Tech Stack:
+
+Frontend: React Native (Expo)
+
+Backend: Node.js with Express
+
+Database: MongoDB with Mongoose
+
+Authentication: JWT (access + refresh tokens)
+
+Password hashing: bcrypt
+
+File storage: Cloudinary (for profile images)
+
+Payments: Stripe subscriptions
+
+Real-time messaging: Socket.io
+
+State management: React Context or Zustand
+
+Form validation: Zod or Yup
+
+Environment variables for secrets
+
+Proper folder structure and separation of concerns
+
+App Name: Connectly
+
+Core Features:
+
+Authentication
+
+Register (email, password, name, age, gender)
+
+Login
+
+Secure password hashing
+
+JWT authentication with refresh tokens
+
+Protected routes middleware
+
+Logout
+
+Account deletion
+
+User Profile
+
+Edit profile
+
+Upload profile photos
+
+Bio
+
+Interests (array of strings)
+
+Location (city, country)
+
+Preferences (age range, gender preference)
+
+Profile completeness percentage
+
+Matching Logic
+
+Swipe right (like)
+
+Swipe left (pass)
+
+Mutual like creates a match
+
+Store matches in database
+
+Prevent duplicate swipes
+
+Messaging
+
+Real-time chat between matched users only
+
+Save messages in database
+
+Typing indicator
+
+Message timestamps
+
+Unread message count
+
+Subscription (SaaS Model)
+
+Free tier:
+
+Limited swipes per day
+
+Limited messages per day
+
+Premium tier:
+
+Unlimited swipes
+
+See who liked you
+
+Unlimited messaging
+
+Stripe subscription integration
+
+Webhook handling for subscription updates
+
+Middleware to check user subscription
+
+Admin Panel (Basic)
+
+View users
+
+Ban user
+
+Delete user
+
+View subscription stats
+
+Backend Requirements:
+
+Modular architecture:
+
+controllers/
+
+models/
+
+routes/
+
+middleware/
+
+services/
+
+utils/
+
+Proper error handling middleware
+
+Input validation
+
+Rate limiting
+
+CORS configuration
+
+Security best practices (helmet)
+
+Clean REST API design
+
+Pagination for user lists
+
+MongoDB indexes for performance
+
+Frontend Requirements:
+
+Clean modern UI
+
+Authentication flow with protected navigation
+
+Swipe card UI (Tinder-style)
+
+Chat screen
+
+Profile edit screen
+
+Premium upgrade screen
+
+Subscription status display
+
+API service layer
+
+Loading and error states
+
+Production-ready file structure
+
+Database Models:
+
+User
+
+Swipe
+
+Match
+
+Message
+
+Subscription
+
+Make the project scalable and production-ready, with clear comments and clean architecture.
+
+Provide:
+
+Folder structure
+
+Backend implementation
+
+Frontend implementation
+
+Environment variable examples
+
+Instructions to run locally and deploy
+
+Focus on clean, maintainable, scalable code.
