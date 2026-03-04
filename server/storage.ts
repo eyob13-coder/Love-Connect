@@ -482,6 +482,16 @@ export const storage = {
       .filter((u): u is User => u !== undefined && !u.isBanned);
   },
 
+  changePassword(userId: string, newPassword: string): void {
+    const user = users.get(userId);
+    if (!user) throw new Error("User not found");
+    if (newPassword.length < 6) throw new Error("Password must be at least 6 characters");
+    const { hash, salt } = createPasswordHash(newPassword);
+    user.passwordHash = hash;
+    user.passwordSalt = salt;
+    users.set(userId, user);
+  },
+
   getAllUsers(): User[] {
     return Array.from(users.values());
   },

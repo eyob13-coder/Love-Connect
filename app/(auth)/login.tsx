@@ -125,6 +125,13 @@ export default function LoginScreen() {
             </View>
 
             <Pressable
+              onPress={() => router.push("/(auth)/forgot-password")}
+              style={styles.forgotBtn}
+            >
+              <Text style={styles.forgotText}>Forgot password?</Text>
+            </Pressable>
+
+            <Pressable
               style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
               onPress={handleLogin}
               disabled={loading}
@@ -254,6 +261,12 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   eyeButton: { padding: 4 },
+  forgotBtn: { alignSelf: "flex-end", marginBottom: 4 },
+  forgotText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: Colors.primary,
+  },
   primaryBtn: { marginTop: 8, borderRadius: 14, overflow: "hidden" },
   primaryBtnGradient: {
     height: 54,

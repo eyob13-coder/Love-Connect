@@ -10,6 +10,26 @@ const FREE_SWIPE_LIMIT = 10;
 const FREE_MESSAGE_LIMIT = 5;
 const MAX_PHOTO_SIZE_BYTES = 600 * 1024;
 const MAX_PHOTOS = 3;
+const RESET_TOKEN_EXPIRY_MS = 15 * 60 * 1000;
+
+interface ResetTokenEntry {
+  userId: string;
+  code: string;
+  expiresAt: number;
+  used: boolean;
+}
+const resetTokens = new Map<string, ResetTokenEntry>();
+
+function generateResetCode(): string {
+  return crypto.randomInt(100000, 999999).toString();
+}
+
+function cleanExpiredTokens() {
+  const now = Date.now();
+  for (const [key, entry] of resetTokens) {
+    if (now > entry.expiresAt) resetTokens.delete(key);
+  }
+}
 
 function signJwt(payload: object): string {
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
@@ -204,6 +224,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const token = signJwt({ userId: user.id });
       return res.json({ token, user: sanitizeUser(user) });
+    } catch (err: any) {
+      return res.status(500).json({ message: "An error occurred. Please try again." });
+    }
+  });
+
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const ip = (req.headers["x-forwarded-for"] as string) || req.ip || "unknown";
+    if (!rateLimit(`forgot:${ip}`, 5, 60 * 60 * 1000)) {
+      return res.status(429).json({ message: "Too many reset attempts. Try again in an hour." });
+    }
+
+    try {
+      const { email } = req.body;
+      if (!email || !validateEmail(email)) {
+        await new Promise((r) => setTimeout(r, 200));
+        return res.json({ message: "If that email is registered, you will receive a reset code." });
+      }
+
+      cleanExpiredTokens();
+      const user = storage.findUserByEmail(email);
+
+      if (!user) {
+        await new Promise((r) => setTimeout(r, 200));
+        return res.json({ message: "If that email is registered, you will receive a reset code." });
+      }
+
+      const code = generateResetCode();
+      const tokenKey = `${user.id}:${Date.now()}`;
+      resetTokens.set(tokenKey, {
+        userId: user.id,
+        code,
+        expiresAt: Date.now() + RESET_TOKEN_EXPIRY_MS,
+        used: false,
+      });
+
+      console.log(`[PASSWORD RESET] Code for ${email}: ${code} (expires in 15 min)`);
+
+      return res.json({
+        message: "If that email is registered, you will receive a reset code.",
+        _devCode: process.env.NODE_ENV !== "production" ? code : undefined,
+      });
+    } catch (err: any) {
+      return res.status(500).json({ message: "An error occurred. Please try again." });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    const ip = (req.headers["x-forwarded-for"] as string) || req.ip || "unknown";
+    if (!rateLimit(`reset:${ip}`, 10, 60 * 60 * 1000)) {
+      return res.status(429).json({ message: "Too many attempts. Try again later." });
+    }
+
+    try {
+      const { email, code, newPassword } = req.body;
+      if (!email || !code || !newPassword) {
+        return res.status(400).json({ message: "Email, code, and new password are required" });
+      }
+      if (!validateEmail(email)) {
+        return res.status(400).json({ message: "Invalid email address" });
+      }
+      if (typeof newPassword !== "string" || newPassword.length < 6 || newPassword.length > 128) {
+        return res.status(400).json({ message: "Password must be 6–128 characters" });
+      }
+      if (typeof code !== "string" || !/^\d{6}$/.test(code)) {
+        return res.status(400).json({ message: "Code must be a 6-digit number" });
+      }
+
+      const user = storage.findUserByEmail(email);
+      if (!user) {
+        await new Promise((r) => setTimeout(r, 200));
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+
+      cleanExpiredTokens();
+      const now = Date.now();
+
+      const tokenEntry = Array.from(resetTokens.entries())
+        .find(([_, entry]) =>
+          entry.userId === user.id &&
+          !entry.used &&
+          now < entry.expiresAt &&
+          entry.code === code
+        );
+
+      if (!tokenEntry) {
+        return res.status(400).json({ message: "Invalid or expired reset code" });
+      }
+
+      tokenEntry[1].used = true;
+      storage.changePassword(user.id, newPassword);
+
+      const token = signJwt({ userId: user.id });
+      const updatedUser = storage.findUserById(user.id);
+      return res.json({ message: "Password reset successfully", token, user: sanitizeUser(updatedUser!) });
     } catch (err: any) {
       return res.status(500).json({ message: "An error occurred. Please try again." });
     }
@@ -481,8 +595,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/subscription/upgrade", authMiddleware, (req, res) => {
     try {
       const userId = (req as any).userId;
-      const updated = storage.updateUser(userId, { isPremium: true });
-      return res.json({ user: sanitizeUser(updated) });
+      const { plan, cardLast4 } = req.body;
+      const validPlans = ["monthly", "annual", "weekly"];
+      if (plan && !validPlans.includes(plan)) {
+        return res.status(400).json({ message: "Invalid plan" });
+      }
+      const planName = plan || "monthly";
+      const updated = storage.updateUser(userId, {
+        isPremium: true,
+        subscriptionPlan: planName,
+        subscriptionStarted: new Date().toISOString(),
+      } as any);
+      return res.json({ user: sanitizeUser(updated), message: `${planName.charAt(0).toUpperCase() + planName.slice(1)} plan activated!` });
     } catch (err: any) {
       return res.status(400).json({ message: err.message });
     }
@@ -491,8 +615,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/subscription/cancel", authMiddleware, (req, res) => {
     try {
       const userId = (req as any).userId;
-      const updated = storage.updateUser(userId, { isPremium: false });
-      return res.json({ user: sanitizeUser(updated) });
+      const updated = storage.updateUser(userId, {
+        isPremium: false,
+        subscriptionPlan: null,
+      } as any);
+      return res.json({ user: sanitizeUser(updated), message: "Subscription cancelled" });
     } catch (err: any) {
       return res.status(400).json({ message: err.message });
     }
