@@ -11,9 +11,11 @@ interface UserProfile {
   bio: string;
   interests: string[];
   location: { city: string; country: string };
+  coordinates: { lat: number; lng: number } | null;
   preferences: {
     ageRange: { min: number; max: number };
     genderPreference: string;
+    maxDistanceKm: number;
   };
   photos: string[];
   isPremium: boolean;

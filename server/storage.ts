@@ -11,9 +11,11 @@ export interface User {
   bio: string;
   interests: string[];
   location: { city: string; country: string };
+  coordinates: { lat: number; lng: number } | null;
   preferences: {
     ageRange: { min: number; max: number };
     genderPreference: "male" | "female" | "any";
+    maxDistanceKm: number;
   };
   photos: string[];
   isPremium: boolean;
@@ -23,6 +25,21 @@ export interface User {
   lastMessageReset: string;
   createdAt: string;
   isBanned: boolean;
+}
+
+export function haversineKm(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 export interface Swipe {
@@ -89,7 +106,8 @@ const DEMO_PROFILES: Array<{
   bio: string;
   interests: string[];
   location: { city: string; country: string };
-  preferences: { ageRange: { min: number; max: number }; genderPreference: "male" | "female" | "any" };
+  coordinates: { lat: number; lng: number };
+  preferences: { ageRange: { min: number; max: number }; genderPreference: "male" | "female" | "any"; maxDistanceKm: number };
   photos: string[];
   isPremium: boolean;
 }> = [
@@ -101,7 +119,8 @@ const DEMO_PROFILES: Array<{
     bio: "Adventure seeker and coffee enthusiast. Love hiking on weekends and discovering new restaurants in the city. Looking for someone to explore life with.",
     interests: ["Hiking", "Photography", "Coffee", "Travel", "Yoga"],
     location: { city: "San Francisco", country: "USA" },
-    preferences: { ageRange: { min: 24, max: 35 }, genderPreference: "male" },
+    coordinates: { lat: 37.7749, lng: -122.4194 },
+    preferences: { ageRange: { min: 24, max: 35 }, genderPreference: "male", maxDistanceKm: 50 },
     photos: [],
     isPremium: false,
   },
@@ -113,7 +132,8 @@ const DEMO_PROFILES: Array<{
     bio: "Software engineer by day, musician by night. I write code and songs. Looking for someone who appreciates both logic and art.",
     interests: ["Music", "Coding", "Rock climbing", "Reading", "Cooking"],
     location: { city: "New York", country: "USA" },
-    preferences: { ageRange: { min: 22, max: 32 }, genderPreference: "female" },
+    coordinates: { lat: 40.7128, lng: -74.006 },
+    preferences: { ageRange: { min: 22, max: 32 }, genderPreference: "female", maxDistanceKm: 50 },
     photos: [],
     isPremium: true,
   },
@@ -125,7 +145,8 @@ const DEMO_PROFILES: Array<{
     bio: "Art curator with a passion for modern design. I spend my weekends at galleries and farmers markets. Always up for a spontaneous road trip.",
     interests: ["Art", "Design", "Cooking", "Travel", "Film"],
     location: { city: "Los Angeles", country: "USA" },
-    preferences: { ageRange: { min: 23, max: 34 }, genderPreference: "male" },
+    coordinates: { lat: 34.0522, lng: -118.2437 },
+    preferences: { ageRange: { min: 23, max: 34 }, genderPreference: "male", maxDistanceKm: 75 },
     photos: [],
     isPremium: false,
   },
@@ -137,7 +158,8 @@ const DEMO_PROFILES: Array<{
     bio: "Chef and food writer. I believe the way to anyone's heart is through food. Let me cook you something amazing.",
     interests: ["Cooking", "Wine", "Travel", "Fitness", "Photography"],
     location: { city: "Chicago", country: "USA" },
-    preferences: { ageRange: { min: 24, max: 35 }, genderPreference: "female" },
+    coordinates: { lat: 41.8781, lng: -87.6298 },
+    preferences: { ageRange: { min: 24, max: 35 }, genderPreference: "female", maxDistanceKm: 50 },
     photos: [],
     isPremium: true,
   },
@@ -149,7 +171,8 @@ const DEMO_PROFILES: Array<{
     bio: "Veterinarian who rescues animals on weekends. My apartment is a zoo (literally). Looking for someone who loves animals as much as I do.",
     interests: ["Animals", "Nature", "Volunteering", "Yoga", "Books"],
     location: { city: "Austin", country: "USA" },
-    preferences: { ageRange: { min: 25, max: 36 }, genderPreference: "male" },
+    coordinates: { lat: 30.2672, lng: -97.7431 },
+    preferences: { ageRange: { min: 25, max: 36 }, genderPreference: "male", maxDistanceKm: 100 },
     photos: [],
     isPremium: false,
   },
@@ -161,7 +184,8 @@ const DEMO_PROFILES: Array<{
     bio: "Architect designing sustainable spaces. I believe buildings should tell stories. Love long runs, great coffee and meaningful conversations.",
     interests: ["Architecture", "Running", "Coffee", "Sustainability", "Jazz"],
     location: { city: "Seattle", country: "USA" },
-    preferences: { ageRange: { min: 22, max: 33 }, genderPreference: "female" },
+    coordinates: { lat: 47.6062, lng: -122.3321 },
+    preferences: { ageRange: { min: 22, max: 33 }, genderPreference: "female", maxDistanceKm: 50 },
     photos: [],
     isPremium: false,
   },
@@ -173,7 +197,8 @@ const DEMO_PROFILES: Array<{
     bio: "Fashion designer who loves vintage finds. I can spend hours in a thrift store or a museum. Fluent in sarcasm and three languages.",
     interests: ["Fashion", "Art", "Languages", "Travel", "Dancing"],
     location: { city: "Miami", country: "USA" },
-    preferences: { ageRange: { min: 24, max: 35 }, genderPreference: "male" },
+    coordinates: { lat: 25.7617, lng: -80.1918 },
+    preferences: { ageRange: { min: 24, max: 35 }, genderPreference: "male", maxDistanceKm: 75 },
     photos: [],
     isPremium: false,
   },
@@ -185,7 +210,8 @@ const DEMO_PROFILES: Array<{
     bio: "Marine biologist obsessed with the ocean. I dive with sharks for fun. Looking for someone brave enough to join me underwater.",
     interests: ["Diving", "Ocean", "Science", "Surfing", "Photography"],
     location: { city: "San Diego", country: "USA" },
-    preferences: { ageRange: { min: 25, max: 37 }, genderPreference: "female" },
+    coordinates: { lat: 32.7157, lng: -117.1611 },
+    preferences: { ageRange: { min: 25, max: 37 }, genderPreference: "female", maxDistanceKm: 100 },
     photos: [],
     isPremium: true,
   },
@@ -208,6 +234,7 @@ function initializeDemoProfiles() {
         lastMessageReset: today,
         createdAt: new Date().toISOString(),
         isBanned: false,
+        coordinates: profile.coordinates ?? null,
       };
       users.set(id, user);
     });
@@ -223,6 +250,7 @@ export const storage = {
     name: string;
     age: number;
     gender: "male" | "female";
+    coordinates?: { lat: number; lng: number } | null;
   }): User {
     const emailLower = data.email.toLowerCase().trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailLower)) {
@@ -258,9 +286,11 @@ export const storage = {
       bio: "",
       interests: [],
       location: { city: "", country: "" },
+      coordinates: data.coordinates ?? null,
       preferences: {
         ageRange: { min: 18, max: 50 },
         genderPreference: "any",
+        maxDistanceKm: 100,
       },
       photos: [],
       isPremium: false,
@@ -299,19 +329,52 @@ export const storage = {
     users.delete(id);
   },
 
-  getDiscoverProfiles(userId: string): User[] {
+  getDiscoverProfiles(
+    userId: string,
+    viewerCoords?: { lat: number; lng: number } | null,
+    maxDistanceKm?: number
+  ): Array<User & { distanceKm: number | null }> {
     const swipedIds = new Set(
       Array.from(swipes.values())
         .filter((s) => s.swiperId === userId)
         .map((s) => s.targetId)
     );
 
-    return Array.from(users.values()).filter((u) => {
+    const filtered = Array.from(users.values()).filter((u) => {
       if (u.id === userId) return false;
       if (u.isBanned) return false;
       if (swipedIds.has(u.id)) return false;
       return true;
     });
+
+    const withDistance = filtered.map((u) => {
+      let distanceKm: number | null = null;
+      if (viewerCoords && u.coordinates) {
+        distanceKm = haversineKm(
+          viewerCoords.lat, viewerCoords.lng,
+          u.coordinates.lat, u.coordinates.lng
+        );
+      }
+      return { ...u, distanceKm };
+    });
+
+    const limit = maxDistanceKm ?? 0;
+
+    return withDistance
+      .filter((u) => {
+        if (limit > 0 && u.distanceKm !== null) {
+          return u.distanceKm <= limit;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        if (a.distanceKm !== null && b.distanceKm !== null) {
+          return a.distanceKm - b.distanceKm;
+        }
+        if (a.distanceKm !== null) return -1;
+        if (b.distanceKm !== null) return 1;
+        return 0;
+      });
   },
 
   recordSwipe(

@@ -355,7 +355,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }
       if (preferences && typeof preferences === "object") {
-        const pref: any = {};
+        const existing = storage.findUserById(userId)?.preferences ?? {};
+        const pref: any = { ...existing };
         if (preferences.ageRange) {
           pref.ageRange = {
             min: Math.max(18, Math.min(100, parseInt(preferences.ageRange.min) || 18)),
@@ -367,6 +368,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return res.status(400).json({ message: "Invalid gender preference" });
           }
           pref.genderPreference = preferences.genderPreference;
+        }
+        if (preferences.maxDistanceKm !== undefined) {
+          const dist = parseInt(preferences.maxDistanceKm, 10);
+          pref.maxDistanceKm = isNaN(dist) ? 100 : Math.max(1, Math.min(500, dist));
         }
         updates.preferences = pref;
       }
@@ -451,11 +456,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/profile/location", authMiddleware, (req, res) => {
+    try {
+      const userId = (req as any).userId;
+      const { lat, lng } = req.body;
+      if (typeof lat !== "number" || typeof lng !== "number") {
+        return res.status(400).json({ message: "lat and lng must be numbers" });
+      }
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return res.status(400).json({ message: "Invalid coordinates" });
+      }
+      const updated = storage.updateUser(userId, { coordinates: { lat, lng } });
+      return res.json({ user: sanitizeUser(updated) });
+    } catch (err: any) {
+      return res.status(400).json({ message: err.message });
+    }
+  });
+
   app.get("/api/discover", authMiddleware, (req, res) => {
     try {
       const userId = (req as any).userId;
-      const profiles = storage.getDiscoverProfiles(userId);
-      return res.json({ profiles: profiles.map(sanitizeUser) });
+      const viewer = storage.findUserById(userId);
+
+      const latQ = parseFloat(req.query.lat as string);
+      const lngQ = parseFloat(req.query.lng as string);
+      const maxDistQ = parseInt(req.query.maxDistanceKm as string, 10);
+
+      const viewerCoords =
+        !isNaN(latQ) && !isNaN(lngQ)
+          ? { lat: latQ, lng: lngQ }
+          : viewer?.coordinates ?? null;
+
+      const maxDistanceKm = !isNaN(maxDistQ) && maxDistQ > 0
+        ? maxDistQ
+        : viewer?.preferences?.maxDistanceKm ?? 0;
+
+      const profiles = storage.getDiscoverProfiles(userId, viewerCoords, maxDistanceKm);
+
+      return res.json({
+        profiles: profiles.map((p) => {
+          const { passwordHash, passwordSalt, ...safe } = p;
+          return safe;
+        }),
+      });
     } catch (err: any) {
       return res.status(500).json({ message: "Failed to load profiles" });
     }
